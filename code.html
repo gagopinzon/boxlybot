@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hermes - Lead Intelligence Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#7c839b",
+                        "surface-bright": "#f9f9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#bec6e0",
+                        "secondary-fixed": "#e1e3e4",
+                        "tertiary-fixed-dim": "#e9c176",
+                        "secondary": "#5c5f60",
+                        "outline-variant": "#e2e8f0",
+                        "on-tertiary-fixed-variant": "#5d4201",
+                        "on-secondary-fixed-variant": "#454748",
+                        "on-primary-fixed": "#131b2e",
+                        "tertiary-fixed": "#ffdea5",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#0f172a",
+                        "surface-tint": "#565e74",
+                        "surface": "#f9f9ff",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#c5c7c8",
+                        "surface-variant": "#f1f5f9",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "primary": "#0f172a",
+                        "inverse-surface": "#1e293b",
+                        "outline": "#94a3b8",
+                        "on-surface": "#0f172a",
+                        "surface-container-low": "#f8fafc",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#261900",
+                        "on-surface-variant": "#475569",
+                        "on-tertiary-container": "#a17f3b",
+                        "surface-container-high": "#f1f5f9",
+                        "tertiary": "#000000",
+                        "on-secondary-fixed": "#191c1d",
+                        "surface-dim": "#cfdaf2",
+                        "background": "#ffffff",
+                        "on-tertiary-fixed": "#261900",
+                        "inverse-primary": "#bec6e0",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#626566",
+                        "surface-container": "#f8fafc",
+                        "secondary-container": "#e1e3e4",
+                        "primary-container": "#0f172a",
+                        "surface-container-highest": "#e2e8f0",
+                        "inverse-on-surface": "#f8fafc"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "gutter": "24px",
+                        "sm": "8px",
+                        "lg": "32px",
+                        "xl": "64px",
+                        "xs": "4px",
+                        "margin": "40px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"],
+                        "h2": ["Inter", "sans-serif"],
+                        "h1": ["Inter", "sans-serif"],
+                        "label-caps": ["Inter", "sans-serif"],
+                        "body-sm": ["Inter", "sans-serif"],
+                        "mono": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "h3": ["20px", {"lineHeight": "1.4", "letterSpacing": "0", "fontWeight": "600"}],
+                        "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "h1": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "mono": ["13px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20; }
+        body { font-family: 'Inter', sans-serif; }
+        .table-row-hover:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 z-50 flex justify-between items-center h-16 w-full px-margin bg-surface border-b border-outline-variant font-body-md text-body-md">
+<div class="flex items-center gap-md">
+<span class="font-h2 text-h2 font-bold text-primary">Hermes</span>
+<div class="relative w-80 ml-lg">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-4 py-2 text-body-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Buscar prospectos..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-on-primary font-label-caps px-5 py-2.5 rounded text-[11px] uppercase tracking-widest font-bold hover:opacity-90 active:scale-95 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Create Lead
+            </button>
+<div class="flex items-center gap-1 border-l border-outline-variant ml-2 pl-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full ml-2 overflow-hidden border border-outline-variant">
+<img alt="User profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAji_g-_qtg55Q12dC3SqIcKFzG7BSqN1UDHwdLOspZGvUYFu_AyWjQuCtlvQxrGrZtB573P9PEIjFqaLKY-s7TM4cfBmXcxMR4WabGjLOqwUh-h57h1PEg5poSM-1ZBz1b4XBao59BVCDaI_2kb4DF1fIddkjgw5W-T8B0aclY0fNc2-UhTT4NBVtd-4om5sEdr9qVuowbBuISPgZmRQD0PTu1fZ7uuLDCRzZ-z9R42-KkdV-x0PP6Cq6L1_AJj6R0NM_CC7c41qSd"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Shared Component) -->
+<nav class="fixed left-0 top-0 h-screen w-64 py-lg bg-surface border-r border-outline-variant flex flex-col z-40">
+<div class="px-md mt-16 mb-xl">
+<div class="flex items-center gap-3 p-2">
+<div class="w-10 h-10 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<div>
+<h3 class="font-h3 text-h3 font-bold text-primary">Hermes Admin</h3>
+<p class="text-[11px] text-on-surface-variant uppercase tracking-tighter">Lead Generation</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1 px-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded text-primary font-bold bg-surface-container-low font-label-caps text-label-caps uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-lowest transition-all font-label-caps text-label-caps uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">person_search</span>
+                Leads
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-lowest transition-all font-label-caps text-label-caps uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">mail</span>
+                Emails
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-lowest transition-all font-label-caps text-label-caps uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+<div class="mt-auto px-md pb-md">
+<div class="bg-surface-container-low border border-outline-variant p-4 rounded-lg">
+<p class="text-[11px] font-bold text-primary mb-2 uppercase tracking-widest">Plan Actual: Pro</p>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden mb-2">
+<div class="h-full w-3/4 bg-primary"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant">8,420 / 10,000 leads investigados</p>
+<button class="mt-4 w-full border border-primary text-primary font-label-caps text-label-caps py-2 rounded uppercase tracking-widest hover:bg-primary hover:text-white transition-colors">Upgrade Plan</button>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="p-margin max-w-7xl mx-auto">
+<!-- Welcome Header -->
+<div class="mb-lg">
+<h1 class="text-h1 font-h1 text-primary">Resumen General</h1>
+<p class="text-body-md text-on-surface-variant mt-1">Monitorea el progreso de tus investigaciones de leads en tiempo real.</p>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-xl">
+<div class="bg-white p-6 border border-outline-variant rounded">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-4 uppercase tracking-widest">Total Leads</p>
+<div class="flex items-baseline justify-between">
+<span class="text-h1 font-bold text-primary">1,284</span>
+<span class="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">+12%</span>
+</div>
+</div>
+<div class="bg-white p-6 border border-outline-variant rounded">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-4 uppercase tracking-widest">Calificados Hoy</p>
+<div class="flex items-baseline justify-between">
+<span class="text-h1 font-bold text-primary">12</span>
+<div class="flex -space-x-1.5">
+<div class="w-7 h-7 rounded-full border border-white bg-slate-200"></div>
+<div class="w-7 h-7 rounded-full border border-white bg-slate-300"></div>
+<div class="w-7 h-7 rounded-full border border-white bg-slate-400"></div>
+</div>
+</div>
+</div>
+<div class="bg-white p-6 border border-outline-variant rounded">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-4 uppercase tracking-widest">Tasa Oportunidad</p>
+<div class="flex items-baseline justify-between">
+<span class="text-h1 font-bold text-primary">78%</span>
+<span class="material-symbols-outlined text-primary">trending_up</span>
+</div>
+</div>
+<div class="bg-white p-6 border border-outline-variant rounded">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-4 uppercase tracking-widest">Emails: Sent / Pend</p>
+<div class="flex items-baseline justify-between">
+<span class="text-h1 font-bold text-primary">45 <span class="text-h3 font-normal text-on-surface-variant">/ 8</span></span>
+<div class="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full w-4/5 bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Filters -->
+<section class="bg-surface-container-low border border-outline-variant rounded-lg p-md mb-gutter flex flex-wrap items-center gap-md">
+<div class="flex items-center gap-3">
+<span class="text-label-caps font-bold text-on-surface-variant uppercase tracking-widest">Nicho:</span>
+<select class="bg-white border border-outline-variant rounded px-3 py-1.5 text-body-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Todos los nichos</option>
+<option>Muebles</option>
+<option>Cerveza</option>
+</select>
+</div>
+<div class="flex items-center gap-4 flex-1 max-w-md ml-4">
+<span class="text-label-caps font-bold text-on-surface-variant uppercase tracking-widest whitespace-nowrap">Score Mínimo:</span>
+<input class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" type="range"/>
+</div>
+<div class="flex items-center gap-2 ml-auto">
+<button class="bg-white border border-outline-variant px-4 py-1.5 rounded text-body-sm flex items-center gap-2 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                        Últimos 7 días
+                    </button>
+<button class="p-1.5 text-on-surface-variant hover:bg-white rounded transition-colors border border-transparent hover:border-outline-variant">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</section>
+<!-- Table -->
+<div class="bg-white border border-outline-variant rounded overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest">Negocio</th>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest">Nicho</th>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest">Contacto</th>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest">Redes</th>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest">Web</th>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest">Score</th>
+<th class="px-6 py-4 text-label-caps text-on-surface-variant font-bold uppercase tracking-widest text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="table-row-hover transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<div class="font-bold text-primary">Cactus Muebles</div>
+<div class="text-body-sm text-on-surface-variant">Zapopan, JAL</div>
+</td>
+<td class="px-6 py-5"><span class="bg-slate-100 text-on-surface px-2 py-0.5 rounded text-[11px] font-medium">Muebles</span></td>
+<td class="px-6 py-5 text-body-sm text-primary underline decoration-slate-300 underline-offset-4">cactusmuebles@gmail.com</td>
+<td class="px-6 py-5">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">photo_camera</span>
+</td>
+<td class="px-6 py-5"><span class="border border-red-200 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight bg-red-50">SIN WEB</span></td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="text-body-sm font-bold text-primary">9.2</span>
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[92%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white border border-transparent hover:border-outline-variant rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-2 hover:bg-primary hover:text-white border border-transparent rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="table-row-hover transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<div class="font-bold text-primary">Gardiel Muebles</div>
+<div class="text-body-sm text-on-surface-variant">GDL, JAL</div>
+</td>
+<td class="px-6 py-5"><span class="bg-slate-100 text-on-surface px-2 py-0.5 rounded text-[11px] font-medium">Muebles</span></td>
+<td class="px-6 py-5 text-body-sm text-primary underline decoration-slate-300 underline-offset-4">gardiel@muebles.com</td>
+<td class="px-6 py-5">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">photo_camera</span>
+</td>
+<td class="px-6 py-5"><span class="border border-red-200 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight bg-red-50">SIN WEB</span></td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="text-body-sm font-bold text-primary">8.5</span>
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[85%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white border border-transparent hover:border-outline-variant rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-2 hover:bg-primary hover:text-white border border-transparent rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="table-row-hover transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<div class="font-bold text-primary">Elementos Kitchen</div>
+<div class="text-body-sm text-on-surface-variant">CDMX</div>
+</td>
+<td class="px-6 py-5"><span class="bg-slate-100 text-on-surface px-2 py-0.5 rounded text-[11px] font-medium">Cocina</span></td>
+<td class="px-6 py-5 text-body-sm text-primary underline decoration-slate-300 underline-offset-4">elementos@kitchen.mx</td>
+<td class="px-6 py-5">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">photo_camera</span>
+</td>
+<td class="px-6 py-5"><span class="border border-slate-200 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight bg-slate-50">BÁSICA</span></td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="text-body-sm font-bold text-primary">5.0</span>
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[50%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white border border-transparent hover:border-outline-variant rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-2 hover:bg-primary hover:text-white border border-transparent rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="table-row-hover transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<div class="font-bold text-primary">Bruselas Beer</div>
+<div class="text-body-sm text-on-surface-variant">CDMX</div>
+</td>
+<td class="px-6 py-5"><span class="bg-slate-100 text-on-surface px-2 py-0.5 rounded text-[11px] font-medium">Cerveza</span></td>
+<td class="px-6 py-5 text-body-sm text-primary underline decoration-slate-300 underline-offset-4">hello@bruselas.mx</td>
+<td class="px-6 py-5">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">public</span>
+</td>
+<td class="px-6 py-5"><span class="bg-primary text-white px-2 py-0.5 rounded text-[10px] font-bold tracking-tight">SHOPIFY</span></td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="text-body-sm font-bold text-red-600">4.1</span>
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-red-500 w-[41%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white border border-transparent hover:border-outline-variant rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-2 hover:bg-primary hover:text-white border border-transparent rounded transition-all">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
+<p class="text-[11px] text-on-surface-variant font-medium">Mostrando 5 de 1,284 prospectos</p>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 border border-outline-variant rounded text-[11px] font-bold uppercase tracking-widest hover:bg-white transition-colors">Anterior</button>
+<button class="px-4 py-1.5 bg-primary text-white rounded text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">Siguiente</button>
+</div>
+</div>
+</div>
+<!-- Latest Emails -->
+<section class="mt-xl">
+<div class="flex items-center justify-between mb-lg">
+<h3 class="text-h3 font-h3 text-primary">Últimos correos generados</h3>
+<button class="text-primary font-label-caps text-label-caps uppercase tracking-widest hover:underline">Ver todos</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<div class="bg-white p-5 border border-outline-variant rounded hover:border-primary transition-all group">
+<div class="flex items-center justify-between mb-4">
+<span class="bg-slate-100 text-on-surface-variant px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest">Enviado</span>
+<span class="text-[10px] text-on-surface-variant">Hace 10 min</span>
+</div>
+<p class="text-body-md font-bold text-primary mb-2 truncate">Cactus Muebles - Propuesta Verano</p>
+<p class="text-body-sm text-on-surface-variant line-clamp-2 leading-relaxed">Hola, notamos que en Cactus Muebles tienen piezas increíbles pero les falta un sistema de eCommerce sólido...</p>
+<div class="mt-4 pt-4 border-t border-slate-50 flex justify-end">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+</div>
+<div class="bg-white p-5 border border-outline-variant rounded hover:border-primary transition-all group">
+<div class="flex items-center justify-between mb-4">
+<span class="bg-slate-50 border border-slate-200 text-on-surface-variant px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest">Borrador</span>
+<span class="text-[10px] text-on-surface-variant">Hace 1 hora</span>
+</div>
+<p class="text-body-md font-bold text-primary mb-2 truncate">Gardiel Muebles - Optimización Web</p>
+<p class="text-body-sm text-on-surface-variant line-clamp-2 leading-relaxed">Estimado equipo de Gardiel, hemos analizado su presencia digital y encontramos áreas de oportunidad...</p>
+<div class="mt-4 pt-4 border-t border-slate-50 flex justify-end">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+</div>
+<div class="bg-white p-5 border border-outline-variant rounded hover:border-primary transition-all group">
+<div class="flex items-center justify-between mb-4">
+<span class="bg-slate-100 text-on-surface-variant px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest">Enviado</span>
+<span class="text-[10px] text-on-surface-variant">Hace 3 horas</span>
+</div>
+<p class="text-body-md font-bold text-primary mb-2 truncate">Moda y Estilo - Estrategia IG</p>
+<p class="text-body-sm text-on-surface-variant line-clamp-2 leading-relaxed">Su catálogo en Instagram tiene un potencial enorme para pautas pagas que incrementen sus conversiones...</p>
+<div class="mt-4 pt-4 border-t border-slate-50 flex justify-end">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Detail Drawer (Hidden by default, structure for design reference) -->
+<aside class="fixed right-0 top-0 h-full w-[480px] bg-white border-l border-outline-variant z-[60] translate-x-full transition-transform duration-300">
+<div class="flex flex-col h-full">
+<div class="px-8 py-6 border-b border-outline-variant flex items-center justify-between">
+<h3 class="text-h3 font-h3 text-primary">Detalle del Prospecto</h3>
+<button class="p-2 hover:bg-slate-50 rounded-full transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-8">
+<!-- Prospect Header -->
+<div class="flex items-start gap-6 mb-10">
+<div class="w-24 h-24 bg-slate-100 rounded overflow-hidden flex-shrink-0 border border-outline-variant">
+<img alt="Cactus Muebles" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZuNDDBE-lhoXrbc933ba0BGJGWOl9Q9TkvPed7mJ3VDiJYEeYgPLU7aF5QfJLlBJiIlL9Fg6EbqUBlMQ6FBodZ8yXf6_CPaL2B11_CJJwCmmwmTPoFEW4IFeLL7YH1Uy_Dmoi91Z9n4YPpzJQLUVuCRkXJajVuGd-gVR72LiXIWRIEf5QoHAF_bvSjrgV2Zf95PDwoq2TpzAiwftBnmaAhBZxd0WbK20LI-1sL5KhsBO3o_JSv6fTPqqLx8SX9-gvgQLvAEHm9-fN"/>
+</div>
+<div>
+<h4 class="text-h2 font-bold text-primary">Cactus Muebles</h4>
+<p class="text-body-md text-on-surface-variant">Muebles &amp; Interiorismo</p>
+<div class="mt-4 flex gap-3">
+<button class="flex items-center gap-1 text-primary text-[11px] font-bold uppercase tracking-widest hover:underline">
+<span class="material-symbols-outlined text-[16px]">map</span> Ver Maps
+                            </button>
+<button class="flex items-center gap-1 text-primary text-[11px] font-bold uppercase tracking-widest hover:underline">
+<span class="material-symbols-outlined text-[16px]">public</span> Instagram
+                            </button>
+</div>
+</div>
+</div>
+<!-- Email Composer -->
+<div class="bg-surface-container-low rounded-lg p-6 border border-outline-variant">
+<div class="flex items-center justify-between mb-6">
+<span class="text-label-caps font-bold text-primary uppercase tracking-widest">Email Composer</span>
+<div class="flex gap-2">
+<button class="p-1.5 hover:bg-white rounded transition-colors"><span class="material-symbols-outlined text-[20px]">format_bold</span></button>
+<button class="p-1.5 hover:bg-white rounded transition-colors"><span class="material-symbols-outlined text-[20px]">link</span></button>
+</div>
+</div>
+<div class="min-h-[250px] text-body-sm text-primary leading-relaxed">
+<p class="font-bold mb-4 text-body-md"># Propuesta para Cactus Muebles</p>
+<p class="mb-4">Hola equipo de Cactus,</p>
+<p>Notamos que su presencia en Instagram es espectacular y sus piezas tienen un acabado de lujo que el mercado está buscando. Sin embargo, actualmente no cuentan con un sitio web optimizado que permita cerrar ventas directas...</p>
+</div>
+<div class="mt-8 flex justify-end">
+<button class="bg-primary text-white px-6 py-3 rounded text-label-caps font-bold uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-all">
+                            Generar con AI <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Prominent Action Trigger (Replacement for FAB) -->
+<button class="fixed bottom-10 right-10 w-16 h-16 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50 group">
+<span class="material-symbols-outlined text-[30px] transition-transform group-hover:rotate-90">add</span>
+</button>
+<!-- Modal: Nueva Investigación (Hidden) -->
+<div class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] flex items-center justify-center hidden">
+<div class="bg-white w-full max-w-lg rounded p-10 border border-outline-variant">
+<h2 class="text-h2 font-bold text-primary mb-2">Nueva Investigación</h2>
+<p class="text-body-sm text-on-surface-variant mb-8">Define los parámetros para que Hermes encuentre los mejores leads para tu agencia.</p>
+<div class="space-y-6">
+<div>
+<label class="block text-label-caps font-bold text-primary mb-2 uppercase tracking-widest">Nicho / Palabra Clave</label>
+<input class="w-full bg-slate-50 border border-outline-variant rounded p-3 text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Ej. Carpinterías de lujo" type="text"/>
+</div>
+<div>
+<label class="block text-label-caps font-bold text-primary mb-2 uppercase tracking-widest">Ubicación</label>
+<input class="w-full bg-slate-50 border border-outline-variant rounded p-3 text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Ej. Zapopan, Jalisco" type="text"/>
+</div>
+<div class="pt-6 flex gap-3">
+<button class="flex-1 px-6 py-3 border border-outline-variant rounded text-label-caps font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">Cancelar</button>
+<button class="flex-1 px-6 py-3 bg-primary text-white rounded text-label-caps font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">Iniciar Búsqueda</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>
