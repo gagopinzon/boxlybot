@@ -81,6 +81,7 @@ async function addToSegment(
 
 async function createEmailTemplate(
   token: string,
+  segmentId: number,
   subject: string,
   bodyHtml: string
 ): Promise<number> {
@@ -93,13 +94,32 @@ async function createEmailTemplate(
     body: JSON.stringify({
       name: `Correo Boxlybot - ${subject.slice(0, 40)}`,
       subject,
+      language: "en",
+      lists: [segmentId],
       customHtml: bodyHtml,
       emailType: "list",
-      isPublished: 1,
+      isPublished: true,
     }),
   });
-  const data = await res.json();
-  return data?.email?.id;
+  const raw = await res.text();
+  let data: { email?: { id?: number }; id?: number; errors?: unknown };
+  try {
+    data = JSON.parse(raw) as typeof data;
+  } catch {
+    throw new Error(
+      `Mautic crear email: respuesta no JSON (${res.status}): ${raw.slice(0, 400)}`
+    );
+  }
+  if (!res.ok) {
+    throw new Error(`Mautic crear email (${res.status}): ${raw.slice(0, 800)}`);
+  }
+  const id = data.email?.id ?? data.id;
+  if (id == null || Number.isNaN(Number(id))) {
+    throw new Error(
+      `Mautic crear email: la API no devolvió id. Respuesta: ${raw.slice(0, 600)}`
+    );
+  }
+  return Number(id);
 }
 
 async function sendEmail(
@@ -107,13 +127,15 @@ async function sendEmail(
   emailId: number,
   segmentId: number
 ): Promise<void> {
+  const body = new URLSearchParams();
+  body.append("lists[]", String(segmentId));
   const res = await fetch(`${MAUTIC_URL}/api/emails/${emailId}/send`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({ list: String(segmentId) }),
+    body,
   });
   if (!res.ok) {
     const text = await res.text();
@@ -163,6 +185,7 @@ export async function POST(request: Request) {
 
     const emailId = await createEmailTemplate(
       token,
+      SEGMENT_ID,
       correo.asunto,
       `<p>${bodyHtml}</p>`
     );
