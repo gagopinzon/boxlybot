@@ -66,7 +66,7 @@ export function Dashboard() {
 
   async function enqueueCorreo(correoId: string) {
     try {
-      const res = await postJSON("/api/mautic/enviar", { correo_id: correoId });
+      const res = await postJSON<{ ok: boolean; error?: string }>("/api/mautic/enviar", { correo_id: correoId });
       setBanner(
         res?.ok
           ? `✅ Correo enviado correctamente`

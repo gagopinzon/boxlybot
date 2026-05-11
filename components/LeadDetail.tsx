@@ -55,7 +55,7 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
   async function enqueueEnvio() {
     if (!data?.correo) return;
     try {
-      const res = await postJSON("/api/mautic/enviar", {
+      const res = await postJSON<{ ok: boolean; error?: string }>("/api/mautic/enviar", {
         correo_id: data.correo.id,
       });
       onQueued?.(
