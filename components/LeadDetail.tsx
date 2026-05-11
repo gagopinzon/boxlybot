@@ -52,9 +52,13 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
     setDraftBody(currentBody);
   }, [currentBody, open, leadId]);
 
-  async function enqueueEnvio() {
-    if (!data?.correo) return;
+  async function enviarCorreo() {
+    if (!data?.correo || !leadId) return;
     try {
+      if (dirty) {
+        await patchJSON(`/api/leads/${leadId}`, { cuerpo_markdown: draftBody });
+        await mutate();
+      }
       const res = await postJSON<{ ok: boolean; error?: string }>("/api/mautic/enviar", {
         correo_id: data.correo.id,
       });
@@ -201,10 +205,10 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
                     </button>
                     <button
                       type="button"
-                      onClick={enqueueEnvio}
+                      onClick={enviarCorreo}
                       className="flex items-center gap-2 rounded bg-primary px-6 py-3 text-label-caps font-bold uppercase tracking-widest text-white transition-all hover:opacity-90"
                     >
-                      Solicitar envío (Hermes)
+                      Enviar correo
                       <span className="material-symbols-outlined text-[18px]">send</span>
                     </button>
                   </div>

@@ -8,7 +8,7 @@ type Props = {
   loading?: boolean;
   total?: number;
   onOpen: (leadId: string) => void;
-  onEnqueueCorreo: (correoId: string) => void;
+  onEnviarCorreo: (correoId: string) => void;
   correoIdByLeadId: Map<string, string>;
 };
 
@@ -39,7 +39,7 @@ export function LeadTable({
   loading,
   total,
   onOpen,
-  onEnqueueCorreo,
+  onEnviarCorreo,
   correoIdByLeadId,
 }: Props) {
   if (loading && leads.length === 0) {
@@ -152,11 +152,11 @@ export function LeadTable({
                     <button
                       type="button"
                       className="rounded border border-transparent p-2 transition-all hover:bg-primary hover:text-white"
-                      aria-label="Encolar envío de correo"
+                      aria-label="Enviar correo con Mautic"
                       disabled={!correoId}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (correoId) onEnqueueCorreo(correoId);
+                        if (correoId) onEnviarCorreo(correoId);
                       }}
                     >
                       <span className="material-symbols-outlined text-[18px]">send</span>

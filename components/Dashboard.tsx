@@ -64,7 +64,7 @@ export function Dashboard() {
     await mutate((key) => typeof key === "string" && key.startsWith("/api"));
   }
 
-  async function enqueueCorreo(correoId: string) {
+  async function enviarCorreo(correoId: string) {
     try {
       const res = await postJSON<{ ok: boolean; error?: string }>("/api/mautic/enviar", { correo_id: correoId });
       setBanner(
@@ -291,7 +291,7 @@ export function Dashboard() {
                 loading={leadsLoading}
                 total={leadsRes?.total}
                 onOpen={setLeadId}
-                onEnqueueCorreo={enqueueCorreo}
+                onEnviarCorreo={enviarCorreo}
                 correoIdByLeadId={correoIdByLeadId}
               />
 
