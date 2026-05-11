@@ -55,14 +55,17 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
   async function enqueueEnvio() {
     if (!data?.correo) return;
     try {
-      await postJSON("/api/webhook", {
-        action: "enviar_correo",
-        payload: { correo_id: data.correo.id },
+      const res = await postJSON("/api/mautic/enviar", {
+        correo_id: data.correo.id,
       });
-      onQueued?.("Solicitud enviada: Hermes procesará el envío del correo.");
+      onQueued?.(
+        res?.ok
+          ? "✅ Correo enviado correctamente"
+          : `❌ ${res?.error ?? "Error al enviar"}`
+      );
       void mutate();
     } catch (e) {
-      onQueued?.(e instanceof Error ? e.message : "No se pudo registrar la acción.");
+      onQueued?.(e instanceof Error ? e.message : "No se pudo enviar el correo.");
     }
   }
 

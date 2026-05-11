@@ -66,13 +66,15 @@ export function Dashboard() {
 
   async function enqueueCorreo(correoId: string) {
     try {
-      await postJSON("/api/webhook", {
-        action: "enviar_correo",
-        payload: { correo_id: correoId },
-      });
-      setBanner("Acción registrada: Hermes enviará el correo en su siguiente ciclo.");
+      const res = await postJSON("/api/mautic/enviar", { correo_id: correoId });
+      setBanner(
+        res?.ok
+          ? `✅ Correo enviado correctamente`
+          : `❌ ${res?.error ?? "Error al enviar"}`
+      );
+      void refreshAll();
     } catch (e) {
-      setBanner(e instanceof Error ? e.message : "No se pudo registrar la acción.");
+      setBanner(e instanceof Error ? e.message : "No se pudo enviar el correo.");
     }
   }
 
