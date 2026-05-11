@@ -6,7 +6,9 @@
 /out/
 
 # Env
-.env*.local
+.env
+.env.*
+!.env.example
 
 # Hermes / datos locales (JSON generados)
 /data/*.json

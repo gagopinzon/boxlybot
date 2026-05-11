@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import type { Correo, Lead } from "@/lib/types";
-import { fetcher, postJSON } from "@/lib/fetcher";
+import { fetcher, patchJSON, postJSON } from "@/lib/fetcher";
+import { IconFacebook, IconInstagram } from "@/components/SocialIcons";
 
 function MdPreview({ text }: { text: string }) {
   const parts = text.split(/\*\*/);
@@ -36,6 +38,19 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
   );
 
   const open = Boolean(leadId);
+  const [draftBody, setDraftBody] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const currentBody = data?.correo?.cuerpo_markdown ?? "";
+  const dirty = useMemo(() => {
+    if (!data?.correo) return false;
+    return draftBody !== currentBody;
+  }, [currentBody, data?.correo, draftBody]);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraftBody(currentBody);
+  }, [currentBody, open, leadId]);
 
   async function enqueueEnvio() {
     if (!data?.correo) return;
@@ -48,6 +63,20 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
       void mutate();
     } catch (e) {
       onQueued?.(e instanceof Error ? e.message : "No se pudo registrar la acción.");
+    }
+  }
+
+  async function saveBody() {
+    if (!leadId || !data?.correo) return;
+    try {
+      setSaving(true);
+      await patchJSON(`/api/leads/${leadId}`, { cuerpo_markdown: draftBody });
+      onQueued?.("Mensaje actualizado.");
+      await mutate();
+    } catch (e) {
+      onQueued?.(e instanceof Error ? e.message : "No se pudo guardar el mensaje.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -102,10 +131,21 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
                       href={data.lead.instagram}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-primary hover:underline"
+                      className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-primary hover:underline"
                     >
-                      <span className="material-symbols-outlined text-[16px]">photo_camera</span>
+                      <IconInstagram className="h-4 w-4 shrink-0" aria-hidden />
                       Instagram
+                    </a>
+                  )}
+                  {data.lead.facebook && (
+                    <a
+                      href={data.lead.facebook}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-primary hover:underline"
+                    >
+                      <IconFacebook className="h-4 w-4 shrink-0" aria-hidden />
+                      Facebook
                     </a>
                   )}
                 </div>
@@ -131,8 +171,31 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
               {data.correo && (
                 <>
                   <p className="mb-4 text-base font-bold text-primary">{data.correo.asunto}</p>
-                  <MdPreview text={data.correo.cuerpo_markdown} />
+                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Mensaje (editable)
+                  </label>
+                  <textarea
+                    value={draftBody}
+                    onChange={(e) => setDraftBody(e.target.value)}
+                    rows={10}
+                    className="w-full resize-y rounded border border-outline-variant bg-white p-4 text-body-sm leading-relaxed text-primary outline-none focus:border-primary"
+                  />
+                  <div className="mt-4 rounded border border-outline-variant bg-white p-4">
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      Vista previa
+                    </div>
+                    <MdPreview text={draftBody} />
+                  </div>
                   <div className="mt-8 flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={saveBody}
+                      disabled={!dirty || saving}
+                      className="flex items-center gap-2 rounded border border-outline-variant bg-white px-6 py-3 text-label-caps font-bold uppercase tracking-widest text-primary transition-all hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {saving ? "Guardando…" : "Guardar mensaje"}
+                      <span className="material-symbols-outlined text-[18px]">save</span>
+                    </button>
                     <button
                       type="button"
                       onClick={enqueueEnvio}

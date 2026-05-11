@@ -1,6 +1,7 @@
 "use client";
 
 import type { Lead } from "@/lib/types";
+import { IconFacebook, IconInstagram } from "@/components/SocialIcons";
 
 type Props = {
   leads: Lead[];
@@ -101,9 +102,18 @@ export function LeadTable({
                 </td>
                 <td className="px-6 py-5">
                   {lead.instagram || lead.facebook ? (
-                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
-                      photo_camera
-                    </span>
+                    <div className="flex items-center gap-2 text-on-surface-variant">
+                      {lead.instagram && (
+                        <span title="Instagram" className="inline-flex">
+                          <IconInstagram className="h-[18px] w-[18px]" aria-hidden />
+                        </span>
+                      )}
+                      {lead.facebook && (
+                        <span title="Facebook" className="inline-flex">
+                          <IconFacebook className="h-[18px] w-[18px]" aria-hidden />
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="material-symbols-outlined text-[18px] text-on-surface-variant opacity-40">
                       link_off

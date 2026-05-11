@@ -41,7 +41,9 @@ type Props = {
 };
 
 export function CorreoPreview({ correo, onOpen }: Props) {
-  const preview = correo.cuerpo_markdown.replace(/\*\*/g, "").slice(0, 140);
+  const raw = correo.cuerpo_markdown ?? "";
+  const preview = raw.replace(/\*\*/g, "").slice(0, 140);
+  const previewText = preview.trim() ? `${preview}…` : "Sin contenido de mensaje.";
 
   return (
     <button
@@ -57,7 +59,7 @@ export function CorreoPreview({ correo, onOpen }: Props) {
       </div>
       <p className="mb-2 truncate text-base font-bold text-primary">{correo.asunto}</p>
       <p className="line-clamp-2 text-body-sm leading-relaxed text-on-surface-variant">
-        {preview}…
+        {previewText}
       </p>
       <div className="mt-4 flex justify-end border-t border-slate-50 pt-4">
         <span className="material-symbols-outlined text-[18px] text-on-surface-variant transition-colors group-hover:text-primary">
