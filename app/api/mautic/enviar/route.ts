@@ -96,9 +96,39 @@ function parseEntityIdFromLocation(
   return m ? Number(m[1]) : null;
 }
 
-/** Segmento/lista: ID real (nunca asumir que "4" existe tras un /new). */
+/** Busca un segmento por alias exacto dentro de la respuesta de /api/segments. */
+async function findSegmentByAlias(
+  base: string,
+  token: string,
+  alias: string
+): Promise<number | null> {
+  const res = await fetch(
+    `${base}/api/segments?search=${encodeURIComponent(alias)}&limit=200`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) return null;
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const lists = (data?.lists ?? data?.segments) as Record<string, unknown> | undefined;
+  if (!lists || typeof lists !== "object") return null;
+  for (const [key, seg] of Object.entries(lists)) {
+    if (!/^\d+$/.test(key) || !seg || typeof seg !== "object") continue;
+    const s = seg as { id?: unknown; alias?: unknown };
+    if (s.alias === alias && s.id != null) {
+      const n = Number(s.id);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
+
+/** Segmento/lista: ID real. Busca primero, crea sólo si no existe. */
 async function resolveSegmentId(base: string, token: string): Promise<number> {
-  const preferred = Number(process.env.MAUTIC_SEGMENT_ID ?? "4");
+  const preferred = Number(process.env.MAUTIC_SEGMENT_ID ?? "");
   if (Number.isFinite(preferred) && preferred > 0) {
     const check = await fetch(`${base}/api/segments/${preferred}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -106,23 +136,9 @@ async function resolveSegmentId(base: string, token: string): Promise<number> {
     if (check.ok) return preferred;
   }
 
-  const searchRes = await fetch(
-    `${base}/api/segments?search=${encodeURIComponent("alias:boxlybot-leads")}&limit=10`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const searchRaw = await searchRes.text();
-  let searchData: Record<string, unknown> | null = null;
-  try {
-    searchData = searchRaw ? (JSON.parse(searchRaw) as Record<string, unknown>) : null;
-  } catch {
-    searchData = null;
-  }
-  if (searchData) {
-    const fromMap =
-      firstMappedNumericId(searchData.lists) ??
-      firstMappedNumericId(searchData.segments);
-    if (fromMap != null) return fromMap;
-  }
+  // Buscar por alias exacto antes de intentar crear
+  const existing = await findSegmentByAlias(base, token, "boxlybot-leads");
+  if (existing != null) return existing;
 
   const body = new URLSearchParams();
   body.append("name", "Boxlybot Leads");
@@ -145,6 +161,11 @@ async function resolveSegmentId(base: string, token: string): Promise<number> {
     data = null;
   }
   if (!res.ok) {
+    // Si el alias ya existe, buscar más amplio (get all) y devolver el que coincide
+    if (res.status === 400 && raw.includes("already in use")) {
+      const retry = await findSegmentByAlias(base, token, "boxlybot-leads");
+      if (retry != null) return retry;
+    }
     throw new Error(`Mautic crear segmento (${res.status}): ${raw.slice(0, 600)}`);
   }
   const listObj = data?.list as { id?: number } | undefined;
