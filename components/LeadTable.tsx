@@ -3,13 +3,15 @@
 import type { Lead } from "@/lib/types";
 import { IconFacebook, IconInstagram } from "@/components/SocialIcons";
 
+type QuickSend = { correoId: string; canSend: boolean };
+
 type Props = {
   leads: Lead[];
   loading?: boolean;
   total?: number;
   onOpen: (leadId: string) => void;
   onEnviarCorreo: (correoId: string) => void;
-  correoIdByLeadId: Map<string, string>;
+  quickSendByLeadId: Map<string, QuickSend>;
 };
 
 function WebBadge({ lead }: { lead: Lead }) {
@@ -40,7 +42,7 @@ export function LeadTable({
   total,
   onOpen,
   onEnviarCorreo,
-  correoIdByLeadId,
+  quickSendByLeadId,
 }: Props) {
   if (loading && leads.length === 0) {
     return (
@@ -81,7 +83,7 @@ export function LeadTable({
         <tbody className="divide-y divide-outline-variant">
           {leads.map((lead) => {
             const pct = Math.min(100, Math.round(lead.puntaje_oportunidad * 10));
-            const correoId = correoIdByLeadId.get(lead.id);
+            const quick = quickSendByLeadId.get(lead.id);
             return (
               <tr
                 key={lead.id}
@@ -151,12 +153,19 @@ export function LeadTable({
                     </button>
                     <button
                       type="button"
-                      className="rounded border border-transparent p-2 transition-all hover:bg-primary hover:text-white"
+                      className="rounded border border-transparent p-2 transition-all hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit"
                       aria-label="Enviar correo con Mautic"
-                      disabled={!correoId}
+                      disabled={!quick?.canSend}
+                      title={
+                        quick?.canSend
+                          ? "Enviar borrador pendiente"
+                          : quick
+                            ? "No hay borradores pendientes para este lead"
+                            : "Sin correo asociado"
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (correoId) onEnviarCorreo(correoId);
+                        if (quick?.canSend) onEnviarCorreo(quick.correoId);
                       }}
                     >
                       <span className="material-symbols-outlined text-[18px]">send</span>

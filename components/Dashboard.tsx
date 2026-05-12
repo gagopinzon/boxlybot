@@ -11,6 +11,7 @@ import { useLeads } from "@/hooks/use-leads";
 import { useCorreos } from "@/hooks/use-correos";
 import { useInvestigaciones } from "@/hooks/use-investigaciones";
 import { useStats } from "@/hooks/use-stats";
+import type { Correo } from "@/lib/types";
 import { postJSON } from "@/lib/fetcher";
 
 export function Dashboard() {
@@ -41,10 +42,29 @@ export function Dashboard() {
   const { data: correosRes } = useCorreos();
   const { data: invRes } = useInvestigaciones();
 
-  const correoIdByLeadId = useMemo(() => {
-    const m = new Map<string, string>();
+  const quickSendByLeadId = useMemo(() => {
+    const byLead = new Map<string, Correo[]>();
     for (const c of correosRes?.correos ?? []) {
-      if (!m.has(c.lead_id)) m.set(c.lead_id, c.id);
+      const arr = byLead.get(c.lead_id) ?? [];
+      arr.push(c);
+      byLead.set(c.lead_id, arr);
+    }
+    const m = new Map<string, { correoId: string; canSend: boolean }>();
+    for (const [lid, list] of byLead) {
+      const sorted = [...list].sort(
+        (a, b) =>
+          new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime(),
+      );
+      const sendable = sorted.find(
+        (c) => c.estado === "borrador" || c.estado === "programado",
+      );
+      const pick = sendable ?? sorted[0];
+      if (pick) {
+        m.set(lid, {
+          correoId: pick.id,
+          canSend: pick.estado === "borrador" || pick.estado === "programado",
+        });
+      }
     }
     return m;
   }, [correosRes?.correos]);
@@ -292,7 +312,7 @@ export function Dashboard() {
                 total={leadsRes?.total}
                 onOpen={setLeadId}
                 onEnviarCorreo={enviarCorreo}
-                correoIdByLeadId={correoIdByLeadId}
+                quickSendByLeadId={quickSendByLeadId}
               />
 
               <section className="mt-xl">

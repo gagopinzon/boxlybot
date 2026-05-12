@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readCorreos, readLeads } from "@/lib/hermes";
+import { readCorreos, readLeads, updateCorreoById } from "@/lib/hermes";
 
 /** Hermes lee JSON del disco; debe ejecutarse en Node, no en Edge. */
 export const runtime = "nodejs";
@@ -323,6 +323,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (correo.estado === "enviado" || correo.estado === "respondido") {
+      return NextResponse.json(
+        { ok: false, error: "Este correo ya fue enviado y no puede reenviarse desde aquí." },
+        { status: 409 }
+      );
+    }
+
     const leads = await readLeads();
     const lead = leads.find((l) => l.id === correo.lead_id);
 
@@ -352,6 +359,12 @@ export async function POST(request: Request) {
     );
 
     await sendEmailToContact(base, token, emailId, contactId);
+
+    const sentAt = new Date().toISOString();
+    await updateCorreoById(correo.id, {
+      estado: "enviado",
+      fecha_envio: sentAt,
+    });
 
     return NextResponse.json({
       ok: true,

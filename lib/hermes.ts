@@ -144,7 +144,9 @@ export async function readCorreos(): Promise<Correo[]> {
 
 export async function updateCorreoById(
   id: string,
-  patch: Partial<Pick<Correo, "asunto" | "cuerpo_markdown" | "estado" | "variante">>,
+  patch: Partial<
+    Pick<Correo, "asunto" | "cuerpo_markdown" | "estado" | "variante" | "lead_email" | "fecha_envio">
+  >,
 ): Promise<Correo> {
   await ensureSeedData();
   const correos = await readCorreos();
@@ -156,6 +158,27 @@ export async function updateCorreoById(
   correos[idx] = updated;
   await writeJSON(FILES.correos, correos);
   return updated;
+}
+
+export async function appendCorreo(
+  row: Omit<Correo, "id" | "fecha_creacion"> & { id?: string; fecha_creacion?: string },
+): Promise<Correo> {
+  await ensureSeedData();
+  const correos = await readCorreos();
+  const nuevo: Correo = {
+    id: row.id ?? `cor_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    fecha_creacion: row.fecha_creacion ?? new Date().toISOString(),
+    lead_id: row.lead_id,
+    asunto: row.asunto,
+    cuerpo_markdown: row.cuerpo_markdown,
+    variante: row.variante,
+    estado: row.estado,
+    lead_email: row.lead_email,
+    ...(row.fecha_envio !== undefined ? { fecha_envio: row.fecha_envio } : {}),
+  };
+  correos.push(nuevo);
+  await writeJSON(FILES.correos, correos);
+  return nuevo;
 }
 
 export async function appendPendingAction(

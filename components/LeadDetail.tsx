@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import type { Correo, Lead } from "@/lib/types";
 import { fetcher, patchJSON, postJSON } from "@/lib/fetcher";
@@ -29,7 +29,12 @@ type Props = {
   onQueued?: (msg: string) => void;
 };
 
-type DetailResponse = { lead: Lead; correo: Correo | null };
+type DetailResponse = { lead: Lead; correos: Correo[]; correo: Correo | null };
+
+function puedeEnviar(c: Correo | null | undefined): boolean {
+  if (!c) return false;
+  return c.estado === "borrador" || c.estado === "programado";
+}
 
 export function LeadDetail({ leadId, onClose, onQueued }: Props) {
   const { data, isLoading, mutate } = useSWR<DetailResponse>(
@@ -38,52 +43,124 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
   );
 
   const open = Boolean(leadId);
+  const [selectedCorreoId, setSelectedCorreoId] = useState<string | null>(null);
   const [draftBody, setDraftBody] = useState("");
+  const [draftAsunto, setDraftAsunto] = useState("");
+  const [draftEmail, setDraftEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [addingCorreo, setAddingCorreo] = useState(false);
 
-  const currentBody = data?.correo?.cuerpo_markdown ?? "";
-  const dirty = useMemo(() => {
-    if (!data?.correo) return false;
-    return draftBody !== currentBody;
-  }, [currentBody, data?.correo, draftBody]);
+  const correos = useMemo(() => data?.correos ?? [], [data?.correos]);
+  const active = useMemo(
+    () => correos.find((c) => c.id === selectedCorreoId) ?? correos[0] ?? null,
+    [correos, selectedCorreoId],
+  );
 
   useEffect(() => {
-    if (!open) return;
-    setDraftBody(currentBody);
-  }, [currentBody, open, leadId]);
+    if (!open || !leadId) {
+      setSelectedCorreoId(null);
+      return;
+    }
+    if (!correos.length) {
+      setSelectedCorreoId(null);
+      return;
+    }
+    setSelectedCorreoId((prev) => {
+      if (prev && correos.some((c) => c.id === prev)) return prev;
+      const prefer = correos.find((c) => c.estado === "borrador" || c.estado === "programado");
+      return (prefer ?? correos[0]).id;
+    });
+  }, [open, leadId, correos]);
+
+  // Sincronizar borradores con el servidor al cambiar de borrador o tras guardar/mutar.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- dependemos de campos del correo, no del objeto `active` entero
+  useEffect(() => {
+    if (!active) return;
+    setDraftBody(active.cuerpo_markdown);
+    setDraftAsunto(active.asunto);
+    setDraftEmail(active.lead_email);
+  }, [
+    active?.id,
+    active?.cuerpo_markdown,
+    active?.asunto,
+    active?.lead_email,
+  ]);
+
+  const dirty = useMemo(() => {
+    if (!active) return false;
+    return (
+      draftBody !== active.cuerpo_markdown ||
+      draftAsunto !== active.asunto ||
+      draftEmail.trim() !== active.lead_email
+    );
+  }, [active, draftBody, draftAsunto, draftEmail]);
+
+  const yaEnviado = active && !puedeEnviar(active);
+
+  const persistDraft = useCallback(async () => {
+    if (!active) return;
+    const patch: Record<string, string> = {};
+    if (draftBody !== active.cuerpo_markdown) patch.cuerpo_markdown = draftBody;
+    if (draftAsunto !== active.asunto) patch.asunto = draftAsunto;
+    const em = draftEmail.trim();
+    if (em !== active.lead_email) patch.lead_email = em;
+    if (Object.keys(patch).length === 0) return;
+    await patchJSON<{ correo: Correo }>(`/api/correos/${active.id}`, patch);
+    await mutate();
+  }, [active, draftBody, draftAsunto, draftEmail, mutate]);
 
   async function enviarCorreo() {
-    if (!data?.correo || !leadId) return;
+    if (!active || !puedeEnviar(active)) return;
     try {
+      setSending(true);
       if (dirty) {
-        await patchJSON(`/api/leads/${leadId}`, { cuerpo_markdown: draftBody });
-        await mutate();
+        await persistDraft();
       }
       const res = await postJSON<{ ok: boolean; error?: string }>("/api/mautic/enviar", {
-        correo_id: data.correo.id,
+        correo_id: active.id,
       });
       onQueued?.(
         res?.ok
           ? "✅ Correo enviado correctamente"
-          : `❌ ${res?.error ?? "Error al enviar"}`
+          : `❌ ${res?.error ?? "Error al enviar"}`,
       );
-      void mutate();
+      await mutate();
     } catch (e) {
       onQueued?.(e instanceof Error ? e.message : "No se pudo enviar el correo.");
+    } finally {
+      setSending(false);
     }
   }
 
-  async function saveBody() {
-    if (!leadId || !data?.correo) return;
+  async function saveDraft() {
+    if (!active) return;
     try {
       setSaving(true);
-      await patchJSON(`/api/leads/${leadId}`, { cuerpo_markdown: draftBody });
-      onQueued?.("Mensaje actualizado.");
-      await mutate();
+      await persistDraft();
+      onQueued?.("Cambios guardados.");
     } catch (e) {
-      onQueued?.(e instanceof Error ? e.message : "No se pudo guardar el mensaje.");
+      onQueued?.(e instanceof Error ? e.message : "No se pudo guardar.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function addCorreo() {
+    if (!leadId) return;
+    try {
+      setAddingCorreo(true);
+      const res = await postJSON<{ correo: Correo }>("/api/correos", {
+        lead_id: leadId,
+        ...(active ? { from_correo_id: active.id } : {}),
+      });
+      setSelectedCorreoId(res.correo.id);
+      onQueued?.("Nuevo borrador para otra cuenta de correo.");
+      await mutate();
+    } catch (e) {
+      onQueued?.(e instanceof Error ? e.message : "No se pudo crear el borrador.");
+    } finally {
+      setAddingCorreo(false);
     }
   }
 
@@ -160,24 +237,86 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
             </div>
 
             <div className="rounded-lg border border-outline-variant bg-surface-container-low p-6">
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <span className="text-label-caps font-bold uppercase tracking-widest text-primary">
-                  Borrador de correo
+                  Borradores de correo
                 </span>
-                {data.correo && (
-                  <span className="rounded bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                    {data.correo.estado}
-                  </span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => void addCorreo()}
+                  disabled={!leadId || addingCorreo}
+                  className="flex items-center gap-1 rounded border border-outline-variant bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {addingCorreo ? (
+                    "Creando…"
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[16px]">add</span>
+                      Otra cuenta
+                    </>
+                  )}
+                </button>
               </div>
-              {!data.correo && (
-                <p className="text-body-sm text-on-surface-variant">
-                  Aún no hay correo asociado para este lead.
-                </p>
+              {!correos.length && (
+                <div className="space-y-4">
+                  <p className="text-body-sm text-on-surface-variant">
+                    No hay borradores. Crea uno para definir asunto, destinatario y mensaje.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void addCorreo()}
+                    disabled={addingCorreo}
+                    className="rounded bg-primary px-5 py-2.5 text-label-caps font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {addingCorreo ? "Creando…" : "Crear borrador"}
+                  </button>
+                </div>
               )}
-              {data.correo && (
+              {active && (
                 <>
-                  <p className="mb-4 text-base font-bold text-primary">{data.correo.asunto}</p>
+                  <div className="mb-4">
+                    <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      Borrador activo
+                    </label>
+                    <select
+                      value={active.id}
+                      onChange={(e) => setSelectedCorreoId(e.target.value)}
+                      className="w-full rounded border border-outline-variant bg-white px-3 py-2.5 text-body-sm text-primary outline-none focus:border-primary"
+                    >
+                      {correos.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.lead_email} — {c.estado}
+                          {c.asunto ? ` (${c.asunto.slice(0, 36)}${c.asunto.length > 36 ? "…" : ""})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mb-4 flex items-center justify-end">
+                    <span className="rounded bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      {active.estado}
+                    </span>
+                  </div>
+                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Asunto
+                  </label>
+                  <input
+                    type="text"
+                    value={draftAsunto}
+                    onChange={(e) => setDraftAsunto(e.target.value)}
+                    className="mb-4 w-full rounded border border-outline-variant bg-white px-4 py-3 text-body-sm text-primary outline-none focus:border-primary"
+                    placeholder="Asunto del correo"
+                  />
+                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Correo destinatario
+                  </label>
+                  <input
+                    type="email"
+                    value={draftEmail}
+                    onChange={(e) => setDraftEmail(e.target.value)}
+                    className="mb-4 w-full rounded border border-outline-variant bg-white px-4 py-3 text-body-sm text-primary outline-none focus:border-primary"
+                    placeholder="correo@ejemplo.com"
+                    autoComplete="off"
+                  />
                   <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
                     Mensaje (editable)
                   </label>
@@ -196,20 +335,35 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
                   <div className="mt-8 flex flex-wrap justify-end gap-3">
                     <button
                       type="button"
-                      onClick={saveBody}
+                      onClick={() => void saveDraft()}
                       disabled={!dirty || saving}
                       className="flex items-center gap-2 rounded border border-outline-variant bg-white px-6 py-3 text-label-caps font-bold uppercase tracking-widest text-primary transition-all hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {saving ? "Guardando…" : "Guardar mensaje"}
+                      {saving ? "Guardando…" : "Guardar cambios"}
                       <span className="material-symbols-outlined text-[18px]">save</span>
                     </button>
                     <button
                       type="button"
-                      onClick={enviarCorreo}
-                      className="flex items-center gap-2 rounded bg-primary px-6 py-3 text-label-caps font-bold uppercase tracking-widest text-white transition-all hover:opacity-90"
+                      onClick={() => void enviarCorreo()}
+                      disabled={!puedeEnviar(active) || sending}
+                      className="flex min-w-[10.5rem] items-center justify-center gap-2 rounded bg-primary px-6 py-3 text-label-caps font-bold uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:opacity-70"
                     >
-                      Enviar correo
-                      <span className="material-symbols-outlined text-[18px]">send</span>
+                      {sending ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                          Enviando…
+                        </>
+                      ) : yaEnviado ? (
+                        <>
+                          Enviado
+                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                        </>
+                      ) : (
+                        <>
+                          Enviar correo
+                          <span className="material-symbols-outlined text-[18px]">send</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </>
