@@ -206,7 +206,7 @@ async function createEmailTemplate(
   body.append("language", (process.env.MAUTIC_EMAIL_LANGUAGE ?? "en").trim() || "en");
   body.append("lists[0]", String(segmentId));
   body.append("customHtml", bodyHtml);
-  body.append("emailType", "list");
+  body.append("emailType", "template");
   body.append("isPublished", "1");
 
   const res = await fetch(`${base}/api/emails/new`, {
