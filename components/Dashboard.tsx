@@ -49,20 +49,28 @@ export function Dashboard() {
       arr.push(c);
       byLead.set(c.lead_id, arr);
     }
-    const m = new Map<string, { correoId: string; canSend: boolean }>();
+    const m = new Map<
+      string,
+      { correoId: string; canSend: boolean; sent: boolean; fechaEnvio?: string }
+    >();
     for (const [lid, list] of byLead) {
       const sorted = [...list].sort(
         (a, b) =>
           new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime(),
       );
+      const enviado = sorted.find(
+        (c) => c.estado === "enviado" || c.estado === "respondido",
+      );
       const sendable = sorted.find(
         (c) => c.estado === "borrador" || c.estado === "programado",
       );
-      const pick = sendable ?? sorted[0];
+      const pick = sendable ?? enviado ?? sorted[0];
       if (pick) {
         m.set(lid, {
           correoId: pick.id,
           canSend: pick.estado === "borrador" || pick.estado === "programado",
+          sent: Boolean(enviado),
+          fechaEnvio: enviado?.fecha_envio ?? enviado?.fecha_creacion,
         });
       }
     }
@@ -82,20 +90,6 @@ export function Dashboard() {
 
   async function refreshAll() {
     await mutate((key) => typeof key === "string" && key.startsWith("/api"));
-  }
-
-  async function enviarCorreo(correoId: string) {
-    try {
-      const res = await postJSON<{ ok: boolean; error?: string }>("/api/mautic/enviar", { correo_id: correoId });
-      setBanner(
-        res?.ok
-          ? `✅ Correo enviado correctamente`
-          : `❌ ${res?.error ?? "Error al enviar"}`
-      );
-      void refreshAll();
-    } catch (e) {
-      setBanner(e instanceof Error ? e.message : "No se pudo enviar el correo.");
-    }
   }
 
   async function startInvestigacion() {
@@ -311,7 +305,6 @@ export function Dashboard() {
                 loading={leadsLoading}
                 total={leadsRes?.total}
                 onOpen={setLeadId}
-                onEnviarCorreo={enviarCorreo}
                 quickSendByLeadId={quickSendByLeadId}
               />
 

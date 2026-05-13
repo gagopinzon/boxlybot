@@ -142,6 +142,22 @@ export async function readCorreos(): Promise<Correo[]> {
   return Array.isArray(data) ? data : [];
 }
 
+export async function updateLeadById(
+  id: string,
+  patch: Partial<Pick<Lead, "estado" | "notas" | "ultimo_contacto">>,
+): Promise<Lead> {
+  await ensureSeedData();
+  const leads = await readLeads();
+  const idx = leads.findIndex((l) => l.id === id);
+  if (idx === -1) {
+    throw new Error("Lead no encontrado");
+  }
+  const updated: Lead = { ...leads[idx], ...patch };
+  leads[idx] = updated;
+  await writeJSON(FILES.leads, leads);
+  return updated;
+}
+
 export async function updateCorreoById(
   id: string,
   patch: Partial<

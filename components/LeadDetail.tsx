@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type { Correo, Lead } from "@/lib/types";
 import { fetcher, patchJSON, postJSON } from "@/lib/fetcher";
 import { IconFacebook, IconInstagram } from "@/components/SocialIcons";
@@ -41,6 +41,7 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
     leadId ? `/api/leads/${leadId}` : null,
     fetcher,
   );
+  const { mutate: globalMutate } = useSWRConfig();
 
   const open = Boolean(leadId);
   const [selectedCorreoId, setSelectedCorreoId] = useState<string | null>(null);
@@ -50,6 +51,18 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [addingCorreo, setAddingCorreo] = useState(false);
+  const [updatingEstado, setUpdatingEstado] = useState(false);
+
+  const isDescartado = data?.lead.estado === "descartado";
+
+  const refreshLeadsList = useCallback(async () => {
+    await globalMutate(
+      (key) => typeof key === "string" && key.startsWith("/api/leads"),
+    );
+    await globalMutate(
+      (key) => typeof key === "string" && key.startsWith("/api/stats"),
+    );
+  }, [globalMutate]);
 
   const correos = useMemo(() => data?.correos ?? [], [data?.correos]);
   const active = useMemo(
@@ -112,6 +125,10 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
 
   async function enviarCorreo() {
     if (!active || !puedeEnviar(active)) return;
+    if (isDescartado) {
+      onQueued?.("Este lead está descartado: restáuralo antes de enviar.");
+      return;
+    }
     try {
       setSending(true);
       if (dirty) {
@@ -126,6 +143,7 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
           : `❌ ${res?.error ?? "Error al enviar"}`,
       );
       await mutate();
+      await refreshLeadsList();
     } catch (e) {
       onQueued?.(e instanceof Error ? e.message : "No se pudo enviar el correo.");
     } finally {
@@ -143,6 +161,25 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
       onQueued?.(e instanceof Error ? e.message : "No se pudo guardar.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function setLeadEstado(nuevo: Lead["estado"]) {
+    if (!leadId) return;
+    try {
+      setUpdatingEstado(true);
+      await patchJSON<{ lead: Lead }>(`/api/leads/${leadId}`, { estado: nuevo });
+      await mutate();
+      await refreshLeadsList();
+      onQueued?.(
+        nuevo === "descartado"
+          ? "Lead descartado: ya no se le enviarán correos."
+          : "Lead reactivado.",
+      );
+    } catch (e) {
+      onQueued?.(e instanceof Error ? e.message : "No se pudo actualizar el lead.");
+    } finally {
+      setUpdatingEstado(false);
     }
   }
 
@@ -203,13 +240,21 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
                   </span>
                 )}
               </div>
-              <div>
-                <h4 className="text-2xl font-bold text-primary">{data.lead.negocio}</h4>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-2xl font-bold text-primary">{data.lead.negocio}</h4>
+                  {isDescartado && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="material-symbols-outlined text-[14px]">block</span>
+                      Descartado
+                    </span>
+                  )}
+                </div>
                 <p className="text-body-md text-on-surface-variant">
                   {data.lead.nicho} · {data.lead.ubicacion}
                 </p>
                 <p className="mt-3 text-body-sm text-on-surface-variant">{data.lead.descripcion}</p>
-                <div className="mt-4 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
                   {data.lead.instagram && (
                     <a
                       href={data.lead.instagram}
@@ -231,6 +276,28 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
                       <IconFacebook className="h-4 w-4 shrink-0" aria-hidden />
                       Facebook
                     </a>
+                  )}
+                  {isDescartado ? (
+                    <button
+                      type="button"
+                      onClick={() => void setLeadEstado("nuevo")}
+                      disabled={updatingEstado}
+                      className="ml-auto inline-flex items-center gap-1.5 rounded border border-outline-variant bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                      {updatingEstado ? "Restaurando…" : "Restaurar lead"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void setLeadEstado("descartado")}
+                      disabled={updatingEstado}
+                      className="ml-auto inline-flex items-center gap-1.5 rounded border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-red-600 transition-colors hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Marca el lead como descartado para no enviarle correos"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">block</span>
+                      {updatingEstado ? "Descartando…" : "Descartar lead"}
+                    </button>
                   )}
                 </div>
               </div>
@@ -345,13 +412,23 @@ export function LeadDetail({ leadId, onClose, onQueued }: Props) {
                     <button
                       type="button"
                       onClick={() => void enviarCorreo()}
-                      disabled={!puedeEnviar(active) || sending}
+                      disabled={!puedeEnviar(active) || sending || isDescartado}
+                      title={
+                        isDescartado
+                          ? "Lead descartado: restáuralo para enviar"
+                          : undefined
+                      }
                       className="flex min-w-[10.5rem] items-center justify-center gap-2 rounded bg-primary px-6 py-3 text-label-caps font-bold uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:opacity-70"
                     >
                       {sending ? (
                         <>
                           <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
                           Enviando…
+                        </>
+                      ) : isDescartado ? (
+                        <>
+                          Descartado
+                          <span className="material-symbols-outlined text-[18px]">block</span>
                         </>
                       ) : yaEnviado ? (
                         <>

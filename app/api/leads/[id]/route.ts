@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
-import { readCorreos, readLeads, updateCorreoById } from "@/lib/hermes";
-import type { Correo } from "@/lib/types";
+import {
+  readCorreos,
+  readLeads,
+  updateCorreoById,
+  updateLeadById,
+} from "@/lib/hermes";
+import type { Correo, LeadEstado } from "@/lib/types";
+
+const VALID_LEAD_ESTADOS: LeadEstado[] = [
+  "nuevo",
+  "contactado",
+  "respondio",
+  "cerrado",
+  "descartado",
+];
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,38 +51,66 @@ export async function PATCH(request: Request, context: Params) {
     cuerpo_markdown?: unknown;
     asunto?: unknown;
     lead_email?: unknown;
+    estado?: unknown;
+    notas?: unknown;
   };
-  const byId =
-    typeof body.correo_id === "string"
-      ? list.find((c) => c.id === body.correo_id)
-      : undefined;
-  const correo = byId ?? list[0] ?? null;
-  if (!correo) {
-    return NextResponse.json(
-      { error: "No hay correo asociado para este lead" },
-      { status: 404 },
-    );
+
+  const leadPatch: Parameters<typeof updateLeadById>[1] = {};
+  if (typeof body.estado === "string") {
+    if (!VALID_LEAD_ESTADOS.includes(body.estado as LeadEstado)) {
+      return NextResponse.json(
+        { error: `estado inválido. Usa uno de: ${VALID_LEAD_ESTADOS.join(", ")}` },
+        { status: 400 },
+      );
+    }
+    leadPatch.estado = body.estado as LeadEstado;
   }
-  if (typeof body.correo_id === "string" && !byId) {
-    return NextResponse.json({ error: "correo_id no pertenece a este lead" }, { status: 400 });
+  if (typeof body.notas === "string") leadPatch.notas = body.notas;
+
+  let updatedLead = lead;
+  if (Object.keys(leadPatch).length > 0) {
+    updatedLead = await updateLeadById(lead.id, leadPatch);
   }
 
-  const patch: Parameters<typeof updateCorreoById>[1] = {};
-  if (typeof body.cuerpo_markdown === "string") patch.cuerpo_markdown = body.cuerpo_markdown;
-  if (typeof body.asunto === "string") patch.asunto = body.asunto;
-  if (typeof body.lead_email === "string") patch.lead_email = body.lead_email.trim();
+  const correoPatch: Parameters<typeof updateCorreoById>[1] = {};
+  if (typeof body.cuerpo_markdown === "string") correoPatch.cuerpo_markdown = body.cuerpo_markdown;
+  if (typeof body.asunto === "string") correoPatch.asunto = body.asunto;
+  if (typeof body.lead_email === "string") correoPatch.lead_email = body.lead_email.trim();
 
-  if (Object.keys(patch).length === 0) {
-    return NextResponse.json(
-      { error: "Envía al menos cuerpo_markdown, asunto o lead_email" },
-      { status: 400 },
-    );
-  }
-  if (patch.lead_email !== undefined && !patch.lead_email.includes("@")) {
+  if (correoPatch.lead_email !== undefined && !correoPatch.lead_email.includes("@")) {
     return NextResponse.json({ error: "lead_email no parece un correo válido" }, { status: 400 });
   }
 
-  const updated = await updateCorreoById(correo.id, patch);
-  const nextList = correosForLead(await readCorreos(), lead.id);
-  return NextResponse.json({ lead, correo: updated, correos: nextList });
+  let updatedCorreo: Correo | null = null;
+  if (Object.keys(correoPatch).length > 0) {
+    const byId =
+      typeof body.correo_id === "string"
+        ? list.find((c) => c.id === body.correo_id)
+        : undefined;
+    const target = byId ?? list[0] ?? null;
+    if (!target) {
+      return NextResponse.json(
+        { error: "No hay correo asociado para este lead" },
+        { status: 404 },
+      );
+    }
+    if (typeof body.correo_id === "string" && !byId) {
+      return NextResponse.json({ error: "correo_id no pertenece a este lead" }, { status: 400 });
+    }
+    updatedCorreo = await updateCorreoById(target.id, correoPatch);
+  }
+
+  if (Object.keys(leadPatch).length === 0 && Object.keys(correoPatch).length === 0) {
+    return NextResponse.json(
+      { error: "Envía estado/notas del lead o cuerpo_markdown/asunto/lead_email del correo" },
+      { status: 400 },
+    );
+  }
+
+  const nextList = correosForLead(await readCorreos(), updatedLead.id);
+  return NextResponse.json({
+    lead: updatedLead,
+    correo: updatedCorreo ?? nextList[0] ?? null,
+    correos: nextList,
+  });
 }

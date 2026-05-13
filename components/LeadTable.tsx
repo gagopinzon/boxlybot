@@ -3,14 +3,18 @@
 import type { Lead } from "@/lib/types";
 import { IconFacebook, IconInstagram } from "@/components/SocialIcons";
 
-type QuickSend = { correoId: string; canSend: boolean };
+type QuickSend = {
+  correoId: string;
+  canSend: boolean;
+  sent: boolean;
+  fechaEnvio?: string;
+};
 
 type Props = {
   leads: Lead[];
   loading?: boolean;
   total?: number;
   onOpen: (leadId: string) => void;
-  onEnviarCorreo: (correoId: string) => void;
   quickSendByLeadId: Map<string, QuickSend>;
 };
 
@@ -41,7 +45,6 @@ export function LeadTable({
   loading,
   total,
   onOpen,
-  onEnviarCorreo,
   quickSendByLeadId,
 }: Props) {
   if (loading && leads.length === 0) {
@@ -76,7 +79,7 @@ export function LeadTable({
               Score
             </th>
             <th className="px-6 py-4 text-right text-label-caps font-bold uppercase tracking-widest text-on-surface-variant">
-              Acciones
+              Correo
             </th>
           </tr>
         </thead>
@@ -118,7 +121,7 @@ export function LeadTable({
                     </div>
                   ) : (
                     <span className="material-symbols-outlined text-[18px] text-on-surface-variant opacity-40">
-                      link_off
+                     
                     </span>
                   )}
                 </td>
@@ -139,37 +142,44 @@ export function LeadTable({
                   </div>
                 </td>
                 <td className="px-6 py-5 text-right">
-                  <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      type="button"
-                      className="rounded border border-transparent p-2 transition-all hover:border-outline-variant hover:bg-white"
-                      aria-label="Ver detalle"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpen(lead.id);
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">visibility</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded border border-transparent p-2 transition-all hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit"
-                      aria-label="Enviar correo con Mautic"
-                      disabled={!quick?.canSend}
-                      title={
-                        quick?.canSend
-                          ? "Enviar borrador pendiente"
-                          : quick
-                            ? "No hay borradores pendientes para este lead"
-                            : "Sin correo asociado"
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (quick?.canSend) onEnviarCorreo(quick.correoId);
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">send</span>
-                    </button>
+                  <div className="flex justify-end">
+                    {lead.estado === "descartado" ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500"
+                        title="Lead descartado: no se enviarán correos"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">block</span>
+                        Descartado
+                      </span>
+                    ) : quick?.sent ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700"
+                        title={
+                          quick.fechaEnvio
+                            ? `Enviado el ${new Date(quick.fechaEnvio).toLocaleString("es-MX")}`
+                            : "Correo enviado"
+                        }
+                      >
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        Enviado
+                      </span>
+                    ) : quick?.canSend ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700"
+                        title="Hay un borrador listo. Abre el detalle para revisarlo y enviarlo."
+                      >
+                        <span className="material-symbols-outlined text-[14px]">mail</span>
+                        Borrador listo
+                      </span>
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant"
+                        title="Sin borrador asociado a este lead"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">drafts</span>
+                        Sin borrador
+                      </span>
+                    )}
                   </div>
                 </td>
               </tr>
